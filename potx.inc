@@ -409,13 +409,13 @@ function _potx_build_files($string_mode = POTX_STRING_RUNTIME, $build_mode = POT
  */
 function _potx_translation_export($translation_export_langcode, $string, $plural = NULL, $api_version = POTX_API_CURRENT) {
   include_once 'core/includes/locale.inc';
+  include_once 'core/includes/gettext.inc';
 
   // Strip out slash escapes.
   $string = stripcslashes($string);
 
   // Column and table name changed between versions.
-  $language_column = 'langcode';
-  $language_table  = 'languages';
+  $language_column = 'language';
 
   if (!isset($plural)) {
     // Single string to look translation up for.
@@ -429,7 +429,12 @@ function _potx_translation_export($translation_export_langcode, $string, $plural
     // String with plural variants. Fill up source string array first.
     $plural = stripcslashes($plural);
     $strings = array();
-    $number_of_plurals = db_query('SELECT plurals FROM {'. $language_table ."} WHERE {$language_column} = :langcode", array(':langcode' => $translation_export_langcode))->fetchField();
+    $locale_translation_plurals = state_get('locale_translation_plurals', array());
+    // Retrieve the plural settings for this language if provided.
+    if (!empty($template_export_langcode)) {
+      $plural_settings = !empty($locale_translation_plurals[$template_export_langcode]) ? $locale_translation_plurals[$template_export_langcode] : array();
+    }
+    $number_of_plurals = !empty($plural_settings['plurals']) ? $plural_settings['plurals'] : 0;
     $plural_index = 0;
     while ($plural_index < $number_of_plurals) {
       if ($plural_index == 0) {
@@ -484,14 +489,17 @@ function _potx_get_header($file, $template_export_langcode = NULL, $api_version 
   // We only have language to use if we should export with that langcode.
   $language = NULL;
   if (isset($template_export_langcode)) {
-    $language = db_query("
-    SELECT language, name, plurals, formula
-      FROM {language} WHERE language = :langcode",
-      array(':langcode' => $template_export_langcode))->fetchObject();
+    $language_settings = config('language.settings');
+    $languages = $language_settings->get('languages');
+    $language = $languages[$template_export_langcode];
   }
-
+  $locale_translation_plurals = state_get('locale_translation_plurals', array());
+  // Retrieve the plural settings for this language if provided.
+  if (!empty($template_export_langcode)) {
+    $plural_settings = !empty($locale_translation_plurals[$template_export_langcode]) ? $locale_translation_plurals[$template_export_langcode] : array();
+  }
   $output = '';
-  $output .= '# '. (isset($language) ? $language->name : 'LANGUAGE') .' translation of Backdrop ('. $file .")\n";
+  $output .= '# '. (isset($language) ? $language['name'] : 'LANGUAGE') .' translation of Backdrop ('. $file .")\n";
   $output .= "# Copyright YEAR NAME <EMAIL@ADDRESS>\n";
   $output .= "# --VERSIONS--\n";
   $output .= "#\n";
@@ -502,12 +510,12 @@ function _potx_get_header($file, $template_export_langcode = NULL, $api_version 
   $output .= '"POT-Creation-Date: '. date("Y-m-d H:iO") ."\\n\"\n";
   $output .= '"PO-Revision-Date: '. (isset($language) ? date("Y-m-d H:iO") : 'YYYY-mm-DD HH:MM+ZZZZ') ."\\n\"\n";
   $output .= "\"Last-Translator: NAME <EMAIL@ADDRESS>\\n\"\n";
-  $output .= "\"Language-Team: ". (isset($language) ? $language->name : 'LANGUAGE') ." <EMAIL@ADDRESS>\\n\"\n";
+  $output .= "\"Language-Team: ". (isset($language) ? $language['name'] : 'LANGUAGE') ." <EMAIL@ADDRESS>\\n\"\n";
   $output .= "\"MIME-Version: 1.0\\n\"\n";
   $output .= "\"Content-Type: text/plain; charset=utf-8\\n\"\n";
   $output .= "\"Content-Transfer-Encoding: 8bit\\n\"\n";
-  if (isset($language->formula) && isset($language->plurals)) {
-    $output .= "\"Plural-Forms: nplurals=". $language->plurals ."; plural=". strtr($language->formula, array('$' => '')) .";\\n\"\n\n";
+  if (isset($plural_settings['formula']) && isset($plural_settings['plurals'])) {
+    $output .= "\"Plural-Forms: nplurals=". $plural_settings['plurals'] ."; plural=". strtr($plural_settings['formula'], array('$' => '')) .";\\n\"\n\n";
   }
   else {
     $output .= "\"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\\n\"\n\n";
@@ -1203,7 +1211,7 @@ function _potx_find_menu_hooks($file, $filebase, $save_callback) {
 
   $hooks = array('_menu', '_menu_alter');
   $keys = array("'title'", '"title"', "'description'", '"description"');
-debug($_potx_lookup);
+// debug($_potx_lookup);
   foreach ($hooks as $hook) {
     if (isset($_potx_lookup[$filebase . $hook]) && is_array($_potx_lookup[$filebase . $hook])) {
       // We have this menu hook in this file.
