@@ -148,9 +148,7 @@ class PotxTestCase extends BackdropWebTestCase {
     ob_start();
     _potx_write_files('potx-test.po');
     $this->potx_output = ob_get_clean();
-    //debug(var_export($this->potx_output, TRUE));
     $this->potx_status = potx_status('get', TRUE);
-    //debug(var_export($this->potx_status, TRUE));
   }
 
   /**
