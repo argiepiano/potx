@@ -1211,7 +1211,6 @@ function _potx_find_menu_hooks($file, $filebase, $save_callback) {
 
   $hooks = array('_menu', '_menu_alter');
   $keys = array("'title'", '"title"', "'description'", '"description"');
-// debug($_potx_lookup);
   foreach ($hooks as $hook) {
     if (isset($_potx_lookup[$filebase . $hook]) && is_array($_potx_lookup[$filebase . $hook])) {
       // We have this menu hook in this file.
