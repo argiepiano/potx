@@ -1,4 +1,4 @@
-Potx
+Translation Template Extractor
 ================================================================================
 
 The goal of the Translation Template Extractor project is to provide
