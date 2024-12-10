@@ -58,6 +58,7 @@ Maintainers
 ---
 
 * Geoff St. Pierre [@serundeputy](https://github.com/serundeputy)
+* [argiepiano](https://github.com/argiepiano)
 * Seeking additional maintainers
 
 Originally Authored for Drupal
